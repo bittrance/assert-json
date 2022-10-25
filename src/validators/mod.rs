@@ -57,6 +57,32 @@ where
     }
 }
 
+#[doc(hidden)]
+macro_rules! impl_from_validator_default {
+    (
+        $($ty:ty),*
+    ) => {
+        $(
+            impl From<$ty> for Box<dyn Validator> {
+                #[inline]
+                fn from(u: $ty) -> Self {
+                    Box::new(eq(u))
+                }
+            }
+        )*
+    };
+}
+
+impl_from_validator_default!(
+    String, bool, u8, u16, u32, u64, usize, i8, i16, i32, i64, isize, f32, f64
+);
+
+impl From<&str> for Box<dyn Validator> {
+    fn from(str_input: &str) -> Self {
+        Box::new(eq(String::from(str_input)))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{Error, Validator, Value};
@@ -83,5 +109,11 @@ mod tests {
             validator.validate(&serde_json::json!("not expected")),
             Err(Error::InvalidValue(_, _))
         ));
+    }
+
+    #[test]
+    fn primitive_type_validation() {
+        let validator: Box<dyn Validator> = 4.into();
+        assert_eq!(Ok(()), validator.validate(&serde_json::json!(4)))
     }
 }
